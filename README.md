@@ -61,8 +61,6 @@ When score stays below 50 % for 5 seconds, the app dims the phone display itself
 - **Early-warning badges** — soft Head Rise / Head Drop indicators fire before a hard violation triggers
 - **Rule chips** — per-metric colour chips (Shoulders · Head Tilt · Hunching) hidden when phone position is bad
 - **Good-posture streak** — consecutive seconds at ≥ 80 %, displayed as a live counter and logged per session
-- **Voice alerts** via TTS — spoken message identifies the specific violation
-- **Haptic vibration** on posture drift events
 - **Screen dimming** via system brightness API (not an overlay tint)
 - **Ghost skeleton overlay** — draws your baseline skeleton on top of any app via `SYSTEM_ALERT_WINDOW`, 5 s after bad posture starts
 - **Picture-in-Picture (PiP)** — compact floating window; monitoring continues while you use other apps
