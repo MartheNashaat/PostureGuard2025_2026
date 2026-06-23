@@ -45,7 +45,6 @@ Every frame produces an overall score (0–100 %) averaged from seven per-metric
 | 20–39 % | Poor Posture |
 | < 20 % | Critical — Fix Now |
 
-An alert fires (voice + vibration) after 5 consecutive seconds below 50 %, with a 5-second cooldown between alerts.
 
 ### Screen dimming
 
