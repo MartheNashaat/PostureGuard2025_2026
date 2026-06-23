@@ -151,7 +151,7 @@ class PostureAnalyzer {
 
     // headRise: nose above baseline (NTS increased)
     final ntsRise = (_smoothNTS - baselineNTS).clamp(0.0, double.infinity);
-    final headRisePercent = (1.0 - ntsRise / ratioThreshold).clamp(0.0, 1.0) * 100;
+    final headRisePercent = (1.0 - ntsRise / (ratioThreshold * 0.75)).clamp(0.0, 1.0) * 100;
 
     // headDrop: nose below baseline (NTS decreased)
     final ntsDrop = (baselineNTS - _smoothNTS).clamp(0.0, double.infinity);
@@ -159,10 +159,11 @@ class PostureAnalyzer {
 
     // Camera hysteresis: 65% exit (smooth EMA signal — tight band is fine).
     const cameraHysteresisExit = 0.65;
-    if (ntsRise > ratioThreshold) {
+    final riseThreshold = ratioThreshold * 0.75;
+    if (ntsRise > riseThreshold) {
       _headRaiseActive = true;
       _headDropActive  = false;
-    } else if (_headRaiseActive && ntsRise < ratioThreshold * cameraHysteresisExit) {
+    } else if (_headRaiseActive && ntsRise < riseThreshold * cameraHysteresisExit) {
       _headRaiseActive = false;
     }
     if (ntsDrop > ratioThreshold) {
@@ -244,7 +245,7 @@ class PostureAnalyzer {
 
     // Camera-confirmed low takes absolute priority: kill the accel-too-high latch
     // so it cannot fire during a noisy frame where _cameraTooLowActive briefly wavers.
-    if (_cameraTooLowActive) _accelTooHighActive = false;
+    if (_cameraTooLowActive || cameraPhoneTooLowRaw) _accelTooHighActive = false;
 
     final bool phoneTooLow  = _accelTooLowActive  || _cameraTooLowActive;
     // phoneTooLow (from any source) wins — once low is active, high is suppressed entirely.
@@ -264,19 +265,12 @@ class PostureAnalyzer {
         landmarks.leftShoulderY  < 0.07 || landmarks.rightShoulderY  < 0.07 ||
         landmarks.leftShoulderX  < 0.0  || landmarks.leftShoulderX  > 1.0 ||
         landmarks.rightShoulderX < 0.0  || landmarks.rightShoulderX > 1.0 ||
-        landmarks.noseX < 0.0 || landmarks.noseX > 1.0 ||
-        landmarks.noseY < 0.0;
+        landmarks.noseX < 0.0 || landmarks.noseX > 1.0;
 
     final hardExtreme =
         phoneTooHigh || phoneTooLow ||
         headRise || headDrop ||
         personOffScreen;
-
-    // SOFT extreme: NTS is drifting toward a hard violation but hasn't fired
-    // yet. Perspective distortion already makes shoulder width/height less
-    // reliable here, so suppress shoulder checks. Head tilt (ear Y diff) is
-    // much less affected by NTS drift, so it is NOT suppressed by soft extreme.
-    final softExtreme = hardExtreme || ntsDrop > ratioSoft || ntsRise > ratioSoft;
 
     // ── Head tilt with hysteresis ─────────────────────────────────────────────
     // Triggers only on left/right tilt (ear height difference vs baseline).
@@ -296,8 +290,9 @@ class PostureAnalyzer {
 
     // ── Shoulder asymmetry with hysteresis ────────────────────────────────────
     // Triggers only when one shoulder Y moves higher/lower than the other vs baseline.
-    // Suppressed by softExtreme and by head tilt (a tilted head shifts shoulder readings).
-    // Entry 0.04, exit 0.02 — prevents per-frame flickering.
+    // Suppressed by hardExtreme and head tilt only (same as head tilt — NTS drift
+    // causes directional bias that would mask one shoulder direction).
+    // Entry 0.06, exit 0.03 — prevents per-frame flickering.
     final leftDelta  = landmarks.leftShoulderY  - calibration.leftShoulderY;
     final rightDelta = landmarks.rightShoulderY - calibration.rightShoulderY;
     final shoulderAsymmetryExcess = (leftDelta - rightDelta).abs();
@@ -306,30 +301,31 @@ class PostureAnalyzer {
     const shoulderYZero    = 0.07;
     final shoulderSymmetryPercent = (1.0 - shoulderAsymmetryExcess / shoulderYZero).clamp(0.0, 1.0) * 100;
 
-    if (!softExtreme && !headTilt && shoulderAsymmetryExcess > shoulderYTrigger) {
+    final shoulderAsymmetryBlock = phoneTooHigh || phoneTooLow || personOffScreen || headTilt;
+    if (!shoulderAsymmetryBlock && shoulderAsymmetryExcess > shoulderYTrigger) {
       _shoulderAsymmetryActive = true;
     } else if (_shoulderAsymmetryActive &&
-               (softExtreme || headTilt || shoulderAsymmetryExcess < shoulderYExit)) {
+               (shoulderAsymmetryBlock || shoulderAsymmetryExcess < shoulderYExit)) {
       _shoulderAsymmetryActive = false;
     }
     final shoulderAsymmetry = _shoulderAsymmetryActive;
 
     // ── Shoulder rounding with hysteresis ─────────────────────────────────────
     // Triggers only when both shoulder Xs come closer together (width narrowed).
-    // Suppressed by softExtreme and head tilt only — NOT by shoulder asymmetry,
+    // Suppressed by shoulderRoundingBlock and head tilt only — NOT by shoulder asymmetry,
     // because hunching (X narrowing) and unevenness (Y difference) are independent
     // axes that can co-occur. Pure Y-asymmetry never narrows width, so excluding
     // shoulderAsymmetry here does not re-introduce false positives.
     // Entry 0.04, exit 0.02 — prevents per-frame flickering.
     final widthNarrowed = (calibration.shoulderWidth - currentShoulderWidth).clamp(0.0, double.infinity);
-    const roundingTrigger = 0.04;
-    const roundingExit    = 0.02;
+    const roundingTrigger = 0.06;
+    const roundingExit    = 0.03;
     const roundingZero    = 0.08;
     final shoulderRoundingPercent = (1.0 - widthNarrowed / roundingZero).clamp(0.0, 1.0) * 100;
 
     // headRise excluded: shoulder narrowing shrinks safeWidth, which inflates
     // NTS and causes a spurious headRise that would otherwise block detection.
-    final shoulderRoundingBlock = phoneTooHigh || phoneTooLow || headDrop || personOffScreen;
+    final shoulderRoundingBlock = phoneTooHigh || phoneTooLow || personOffScreen;
     if (!shoulderRoundingBlock && !headTilt && widthNarrowed > roundingTrigger) {
       _shoulderRoundingActive = true;
     } else if (_shoulderRoundingActive &&
