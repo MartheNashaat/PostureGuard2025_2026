@@ -1,6 +1,6 @@
 # PostureGuard
 
-Real-time posture monitor for Android. Uses the front camera and accelerometer together to detect poor posture and alert you with voice, vibration, and screen-dimming feedback — no wearables, no subscriptions, no cloud.
+Real-time posture monitor for Android. Uses the front camera and accelerometer together to detect poor posture and alert you with screen-dimming feedback — no wearables, no subscriptions, no cloud.
 
 ---
 
