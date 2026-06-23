@@ -152,7 +152,7 @@ class PostureAnalyzer {
 
     // headRise: nose above baseline (NTS increased)
     final ntsRise = (_smoothNTS - baselineNTS).clamp(0.0, double.infinity);
-    final headRisePercent = (1.0 - ntsRise / (ratioThreshold * 0.75)).clamp(0.0, 1.0) * 100;
+    final headRisePercent = (1.0 - ntsRise / (ratioThreshold * 0.5)).clamp(0.0, 1.0) * 100;
 
     // headDrop: nose below baseline (NTS decreased)
     final ntsDrop = (baselineNTS - _smoothNTS).clamp(0.0, double.infinity);
@@ -160,7 +160,7 @@ class PostureAnalyzer {
 
     // Camera hysteresis: 65% exit (smooth EMA signal — tight band is fine).
     const cameraHysteresisExit = 0.65;
-    final riseThreshold = ratioThreshold * 0.75;
+    final riseThreshold = ratioThreshold * 0.5;
     if (ntsRise > riseThreshold) {
       _headRaiseActive = true;
       _headDropActive  = false;
@@ -180,8 +180,8 @@ class PostureAnalyzer {
     // ── Accelerometer: phone position via Y-axis vs calibration baseline ─────
     // Asymmetric thresholds: accelY rises less going up than it drops going down
     // from a typical calibration angle, so "too high" uses a smaller entry value.
-    const double yHighEntry = 0.5;   // m/s² — phone moved up
-    const double yHighExit  = 0.0;   // clear as soon as Y drops back to baseline
+    const double yHighEntry = 1.5;   // m/s² — phone moved up
+    const double yHighExit  = 0.5;   // clear when tilt returns close to baseline
     const double yLowEntry  = 1.5;   // m/s² — phone moved down
     const double yLowExit   = 1.05;
     double phoneTooLowPercent  = 100.0;
@@ -238,7 +238,7 @@ class PostureAnalyzer {
     }
 
     final bool cameraPhoneTooHighRaw =
-        ntsDrop < ratioSoft &&
+        ntsRise < ratioSoft &&
         (landmarks.noseY     - calibration.noseY)     > camThreshold &&
         (landmarks.leftEarY  - calibration.leftEarY)  > camThreshold &&
         (landmarks.rightEarY - calibration.rightEarY) > camThreshold &&
@@ -248,7 +248,8 @@ class PostureAnalyzer {
     if (cameraPhoneTooHighRaw) {
       _cameraTooHighActive = true;
     } else if (_cameraTooHighActive &&
-        (ntsDrop >= ratioSoft ||
+        (ntsRise >= ratioSoft ||
+         ntsDrop >= ratioSoft ||
          (landmarks.noseY     - calibration.noseY)     < camHighExit ||
          (landmarks.leftEarY  - calibration.leftEarY)  < camHighExit ||
          (landmarks.rightEarY - calibration.rightEarY) < camHighExit ||
@@ -331,8 +332,8 @@ class PostureAnalyzer {
     // shoulderAsymmetry here does not re-introduce false positives.
     // Entry 0.04, exit 0.02 — prevents per-frame flickering.
     final widthNarrowed = (calibration.shoulderWidth - currentShoulderWidth).clamp(0.0, double.infinity);
-    const roundingTrigger = 0.06;
-    const roundingExit    = 0.03;
+    const roundingTrigger = 0.04;
+    const roundingExit    = 0.02;
     const roundingZero    = 0.08;
     final shoulderRoundingPercent = (1.0 - widthNarrowed / roundingZero).clamp(0.0, 1.0) * 100;
 
