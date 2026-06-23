@@ -6,7 +6,7 @@ Real-time posture monitor for Android. Uses the front camera and accelerometer t
 
 ## How it works
 
-Place your phone in front of you (propped up or held). PostureGuard uses Google ML Kit to track 5 skeletal landmarks in every camera frame — nose, both ears, both shoulders. It computes a **Nose-to-Shoulder (NTS) ratio** that is scale-invariant and resolution-independent, then compares it against a personal baseline captured during calibration.
+Place your phone in front of you (propped up or held). PostureGuard uses Google ML Kit to track 5 skeletal landmarks in every camera frame — nose, both ears, both shoulders. It computes a Nose-to-Shoulder (NTS) ratio that is scale-invariant and resolution-independent, then compares it against a personal baseline captured during calibration.
 
 The accelerometer runs in parallel. The gravity vector at calibration time is stored alongside the camera baseline. During a session, the signed pitch angle between the two vectors is used to confirm or independently trigger phone-position violations — this handles the common case where shoulders drift off-screen and the camera alone becomes unreliable.
 
