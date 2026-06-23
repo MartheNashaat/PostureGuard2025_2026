@@ -279,7 +279,8 @@ class PostureAnalyzer {
         landmarks.leftShoulderY  < 0.07 || landmarks.rightShoulderY  < 0.07 ||
         landmarks.leftShoulderX  < 0.0  || landmarks.leftShoulderX  > 1.0 ||
         landmarks.rightShoulderX < 0.0  || landmarks.rightShoulderX > 1.0 ||
-        landmarks.noseX < 0.0 || landmarks.noseX > 1.0;
+        landmarks.noseX < 0.0 || landmarks.noseX > 1.0 ||
+        (landmarks.leftEarY < 0.05 && landmarks.rightEarY < 0.05);
 
     final hardExtreme =
         phoneTooHigh || phoneTooLow ||
@@ -339,7 +340,7 @@ class PostureAnalyzer {
 
     // headRise excluded: shoulder narrowing shrinks safeWidth, which inflates
     // NTS and causes a spurious headRise that would otherwise block detection.
-    final shoulderRoundingBlock = phoneTooHigh || phoneTooLow || personOffScreen;
+    final shoulderRoundingBlock = phoneTooHigh || phoneTooLow || personOffScreen || shoulderAsymmetry;
     if (!shoulderRoundingBlock && !headTilt && widthNarrowed > roundingTrigger) {
       _shoulderRoundingActive = true;
     } else if (_shoulderRoundingActive &&
