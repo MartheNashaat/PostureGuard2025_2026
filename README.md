@@ -179,7 +179,6 @@ android/
 | `sensors_plus` | Accelerometer data |
 | `flutter_background_service` | Android foreground service |
 | `flutter_local_notifications` | Foreground service notification channel |
-| `flutter_tts` | Voice feedback (TTS) |
 | `vibration` | Haptic feedback |
 | `sqflite` | Local session history database |
 | `fl_chart` | Session history charts |
